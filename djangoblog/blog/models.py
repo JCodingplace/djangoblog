@@ -67,7 +67,7 @@ class Blogpost(models.Model):
     class Meta:
         verbose_name = _("Blogpost")
         verbose_name_plural = _("Blogposts")
-        ordering = ("is_published", "-published_date", "-last_change_date", )
+        ordering = ("-is_published", "-published_date", "-last_change_date", )
 
     def save(self, *args, **kwargs):
         latest_title_slug = slugify(self.title)
@@ -82,7 +82,7 @@ class Blogpost(models.Model):
         super().save(*args, **kwargs)
 
     def create_file(self):
-        # TODO Fix Security issue - 
+        # TODO Fix Security issue -
         # - it's possible to get any files via curl
         name = self.title_slug.replace('-', '_')
         path = os.path.join(settings.MEDIA_ROOT, 'blogs', name)
