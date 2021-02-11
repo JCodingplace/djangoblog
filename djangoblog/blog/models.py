@@ -1,4 +1,5 @@
 import os
+import json
 from django.db import models
 from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
@@ -9,7 +10,7 @@ from distutils.dir_util import copy_tree
 
 def blog_image_directory_path(instance, filename):
     blogpath = instance.title_slug.replace('-', '_')
-    suffix = filename.split('.')[0]
+    suffix = filename.split('.')[1]
     image_filename = f"{blogpath}_thumbnail"
     fullpath = f"blogs/{blogpath}/{image_filename}.{suffix}"
     return fullpath
@@ -81,10 +82,12 @@ class Blogpost(models.Model):
         super().save(*args, **kwargs)
 
     def create_file(self):
+        # TODO Fix Security issue - 
+        # - it's possible to get any files via curl
         name = self.title_slug.replace('-', '_')
         path = os.path.join(settings.MEDIA_ROOT, 'blogs', name)
         if not os.path.exists(path):
-            os.mkdir(path)
+            os.makedirs(path)
         existing_version_count = len([
             version
             for version in os.listdir(path)
@@ -93,7 +96,7 @@ class Blogpost(models.Model):
         timestamp = timezone.now().strftime("%Y_%m_%d__%H_%M_%S")
         filename = f"{name}__{timestamp}__v{existing_version_count + 1}.json"
         f = open(os.path.join(path, filename), "w")
-        f.write(self.body)
+        f.write(json.dumps(self.body))
         f.close()
 
     def update_backup_directory_on_title_change(self):
