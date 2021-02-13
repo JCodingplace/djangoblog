@@ -20,7 +20,6 @@ services:
   djangoblog:
     build:
       context: .
-    restart: always
     ports:
       - "8000:8000"
     environment:
@@ -34,8 +33,6 @@ services:
       - POSTGRES_DATABASE=${POSTGRES_POSTGRES_DB:-postgres}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-root}
-      - SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-rootpassword}
     volumes:
       - ./djangoblog:/djangoblog
     depends_on:
