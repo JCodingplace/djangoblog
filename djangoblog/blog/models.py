@@ -6,6 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.utils import timezone
 from django.conf import settings
 from distutils.dir_util import copy_tree
+from django.core.cache import cache
 
 
 def blog_image_directory_path(instance, filename):
@@ -79,6 +80,9 @@ class Blogpost(models.Model):
             self.published_date = timezone.now()
 
         self.create_file()
+        if self.is_published:
+            self.clear_cache_on_update()
+
         super().save(*args, **kwargs)
 
     def create_file(self):
@@ -114,3 +118,9 @@ class Blogpost(models.Model):
 
         if old_path_exists and not new_path_exists:
             copy_tree(old_path, new_path)
+
+    def clear_cache_on_update(self):
+        cache_prefix = self.__class__.__name__
+        # https://stackoverflow.com/a/35895038
+        in_cache = cache.get_many(cache.keys(f"*{cache_prefix}*"))
+        cache.delete_many(in_cache)
