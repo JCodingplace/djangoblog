@@ -1,0 +1,49 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=${POSTGRES_POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./additional_docker_services/postgres:/var/lib/postgresql/data/
+
+  redis:
+    image: bitnami/redis:latest
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ./additional_docker_services/redis/redis-data:/var/lib/redis
+      - ./additional_docker_services/redis/redis.conf:/usr/local/etc/redis/redis.conf
+
+  djangoblog:
+    build:
+      context: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${DJANGO_SECRET_KEY:-YOUR_SUPER_SECRET_KEY}
+      - DEBUG=${DJANGO_DEBUG:-True}
+      - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DATABASE=${POSTGRES_POSTGRES_DB:-postgres}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-root}
+      - SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-rootpassword}
+    volumes:
+      - ./djangoblog:/djangoblog
+    depends_on:
+      - postgres
+      - redis
+    command:
+    - sh
+    - -c
+    - |
+      cd djangoblog
+      gunicorn config.wsgi:application --bind 0.0.0.0:8000

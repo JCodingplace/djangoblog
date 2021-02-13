@@ -1,0 +1,58 @@
+version: "3"
+services:
+  postgres:
+    image: postgres:12.0-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - ./additional_docker_services/postgres:/var/lib/postgresql/data/
+
+  redis:
+    image: redis:6.0-alpine
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - ./additional_docker_services/redis/redis-data:/var/lib/redis
+      - ./additional_docker_services/redis/redis.conf:/usr/local/etc/redis/redis.conf
+
+  djangoblog:
+    build:
+      context: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=${DJANGO_SECRET_KEY:-YOUR_SUPER_SECRET_KEY}
+      - DEBUG=${DJANGO_DEBUG:-True}
+      - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS:-*}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DATABASE=${POSTGRES_POSTGRES_DB:-postgres}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-root}
+      - SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-rootpassword}
+
+      - WAIT_HOSTS=postgres:5432
+      - WAIT_HOSTS_TIMEOUT=100
+      - WAIT_SLEEP_INTERVAL=30
+      - WAIT_HOST_CONNECT_TIMEOUT=30
+    volumes:
+      - ./djangoblog:/djangoblog
+    command:
+      - sh
+      - -c
+      - |
+        ./wait
+        cd djangoblog
+        python manage.py collectstatic --no-input --clear
+        python manage.py migrate
+        python manage.py init_superuser
+        gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    depends_on:
+      - postgres
+      - redis
